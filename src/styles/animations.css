@@ -1,0 +1,106 @@
+/* ── 通用动画 keyframes ── */
+
+/* 闪烁（骨架屏） */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 旋转（加载中） */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 向上淡入（列表入场） */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 向下淡入 */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 缩放淡入（弹窗/卡片） */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 底部弹出（底部导航） */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 页面滑动过渡（路由切换） */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+/* 脉冲（点击反馈） */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+/* 渐入 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 数值变化过渡（K线信息条等） */
+@keyframes numberChange {
+  from {
+    opacity: 0.6;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

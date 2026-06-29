@@ -1,0 +1,107 @@
+/* ── 全局重置 & 移动端基础 ── */
+
+/* 使用 border-box 盒模型 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 移动端视口适配 */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica,
+    Arial, sans-serif;
+  background-color: var(--color-bg, #f5f5f5);
+  color: var(--color-text-primary, #1a1a1a);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  min-height: 100vh;
+  /* 动态视口高度 fallback */
+  min-height: calc(var(--vh, 1vh) * 100);
+}
+
+/* 最大宽度容器（移动端优先，平板及以上居中） */
+.page-container {
+  width: 100%;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100vh;
+  min-height: calc(var(--vh, 1vh) * 100);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 去除链接默认样式 */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 图片默认块状 + 最大宽度 */
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 按钮基础重置 */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 列表重置 */
+ul, ol {
+  list-style: none;
+}
+
+/* 输入框基础 */
+input, textarea, select {
+  font: inherit;
+  color: inherit;
+}
+
+/* 滚动条美化（移动端忽略） */
+@media (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-text-muted, #bbb);
+    border-radius: 2px;
+  }
+}
+
+/* 安全区域适配：为底部固定元素增加 padding-bottom */
+.safe-area-bottom {
+  padding-bottom: var(--safe-area-bottom, 0px);
+}
+
+/* 安全区域适配：为顶部固定元素增加 padding-top */
+.safe-area-top {
+  padding-top: var(--safe-area-top, 0px);
+}

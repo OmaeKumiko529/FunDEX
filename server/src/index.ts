@@ -1,0 +1,45 @@
+import express from 'express';
+import cors from 'cors';
+import { initDatabase } from './schema.js';
+import fundInfoRouter from './routes/fundInfo.js';
+import fundNavRouter from './routes/fundNav.js';
+import fundMarketRouter from './routes/fundMarket.js';
+
+// ──────────────────────────────────────────────
+//  Express 服务入口
+// ──────────────────────────────────────────────
+
+// 启动时初始化数据库表
+initDatabase();
+
+const app = express();
+const PORT = process.env.PORT ?? 3000;
+
+// 中间件
+app.use(cors());
+app.use(express.json());
+
+// 路由
+app.use('/api/fund-info', fundInfoRouter);
+app.use('/api/fund-nav', fundNavRouter);
+app.use('/api/fund-market', fundMarketRouter);
+
+// 健康检查
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// 启动
+app.listen(PORT, () => {
+  console.log(`[server] FundEx 服务已启动 → http://localhost:${PORT}`);
+  console.log(`[server] API 端点:`);
+  console.log(`  GET  /api/fund-info`);
+  console.log(`  GET  /api/fund-info/:code`);
+  console.log(`  POST /api/fund-info`);
+  console.log(`  GET  /api/fund-nav/:code`);
+  console.log(`  GET  /api/fund-nav/:code/latest`);
+  console.log(`  POST /api/fund-nav`);
+  console.log(`  GET  /api/fund-market/:code`);
+  console.log(`  POST /api/fund-market`);
+  console.log(`  GET  /api/health`);
+});
