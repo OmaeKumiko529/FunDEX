@@ -4,6 +4,7 @@ import { initDatabase } from './schema.js';
 import fundInfoRouter from './routes/fundInfo.js';
 import fundNavRouter from './routes/fundNav.js';
 import fundMarketRouter from './routes/fundMarket.js';
+import fundFetchRouter from './routes/fundFetch.js';
 
 // ──────────────────────────────────────────────
 //  Express 服务入口
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use('/api/fund-info', fundInfoRouter);
 app.use('/api/fund-nav', fundNavRouter);
 app.use('/api/fund-market', fundMarketRouter);
+app.use('/api/fund-fetch', fundFetchRouter);
 
 // 健康检查
 app.get('/api/health', (_req, res) => {
@@ -41,5 +43,6 @@ app.listen(PORT, () => {
   console.log(`  POST /api/fund-nav`);
   console.log(`  GET  /api/fund-market/:code`);
   console.log(`  POST /api/fund-market`);
+  console.log(`  POST /api/fund-fetch`);
   console.log(`  GET  /api/health`);
 });

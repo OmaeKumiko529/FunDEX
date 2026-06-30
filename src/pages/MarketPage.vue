@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFundStore } from '@/stores/fundStore'
 import FundCard from '@/components/FundCard.vue'
+import TipTool from '@/components/TipTool.vue'
+import type { LongPressPayload } from '@/types/fund'
 
 const router = useRouter()
 const fundStore = useFundStore()
@@ -13,10 +15,10 @@ const pullDistance = ref(0)
 const startY = ref(0)
 const isPulling = ref(false)
 
-const THRESHOLD = 60 // 触发刷新的下拉距离
+const THRESHOLD = 60
 
 function onTouchStart(e: TouchEvent) {
-  if (window.scrollY > 0) return // 不在顶部不触发
+  if (window.scrollY > 0) return
   const touch = e.touches?.[0]
   if (!touch) return
   startY.value = touch.clientY
@@ -29,7 +31,7 @@ function onTouchMove(e: TouchEvent) {
   if (!touch) return
   const diff = touch.clientY - startY.value
   if (diff > 0) {
-    pullDistance.value = Math.min(diff * 0.5, 120) // 阻尼效果
+    pullDistance.value = Math.min(diff * 0.5, 120)
   }
 }
 
@@ -46,8 +48,37 @@ function onTouchEnd() {
   isPulling.value = false
 }
 
+// ── 详情跳转 ──
 function goDetail(fundCode: string) {
   router.push(`/fund/${fundCode}`)
+}
+
+// ── 搜索页跳转 ──
+function goSearch() {
+  router.push('/search')
+}
+
+// ── TipTool 长按菜单 ──
+const tipToolVisible = ref(false)
+const tipToolFund = ref<{ fundCode: string; fundName: string } | null>(null)
+const tipToolPosition = ref({ x: 0, y: 0 })
+
+function onLongPress(payload: LongPressPayload) {
+  tipToolFund.value = { fundCode: payload.fundCode, fundName: payload.fundName }
+  tipToolPosition.value = { x: payload.x, y: payload.y }
+  tipToolVisible.value = true
+}
+
+function closeTipTool() {
+  tipToolVisible.value = false
+}
+
+function onTogglePin(fundCode: string) {
+  fundStore.togglePin(fundCode)
+}
+
+function onRemove(fundCode: string) {
+  fundStore.removeFund(fundCode)
 }
 
 onMounted(() => {
@@ -77,7 +108,7 @@ onMounted(() => {
     <!-- 页面头部 -->
     <header class="page-header">
       <h1 class="page-title">行情</h1>
-      <button class="add-btn" title="添加基金">＋</button>
+      <button class="add-btn" title="添加基金" @click="goSearch">＋</button>
     </header>
 
     <!-- 加载中（首次） -->
@@ -99,7 +130,6 @@ onMounted(() => {
         :key="item.info.fund_code"
         class="fund-card-wrapper"
         :style="{ animationDelay: `${index * 0.05}s` }"
-        @click="goDetail(item.info.fund_code)"
       >
         <FundCard
           :fund-code="item.info.fund_code"
@@ -107,9 +137,24 @@ onMounted(() => {
           :unit-nav="item.latestNav?.unit_nav ?? null"
           :daily-growth-rate="item.latestNav?.daily_growth_rate ?? null"
           :nav-date="item.latestNav?.nav_date ?? null"
+          :pinned="fundStore.isPinned(item.info.fund_code)"
+          @click="goDetail"
+          @longpress="onLongPress"
         />
       </div>
     </div>
+
+    <!-- TipTool 长按弹出菜单 -->
+    <TipTool
+      :visible="tipToolVisible"
+      :fund-code="tipToolFund?.fundCode ?? ''"
+      :fund-name="tipToolFund?.fundName ?? ''"
+      :is-pinned="fundStore.isPinned(tipToolFund?.fundCode ?? '')"
+      :position="tipToolPosition"
+      @close="closeTipTool"
+      @toggle-pin="onTogglePin"
+      @remove="onRemove"
+    />
   </div>
 </template>
 
@@ -246,7 +291,6 @@ onMounted(() => {
 }
 
 .fund-card-wrapper {
-  cursor: pointer;
   animation: fadeInUp var(--duration-slow, 0.3s) var(--ease-out, ease) both;
 }
 </style>

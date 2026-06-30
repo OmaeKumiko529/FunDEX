@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { FundInfo, FundNav, FundMarket, FundDisplay } from '@/types/fund'
+import type { FundInfo, FundNav, FundMarket, FundDisplay, SearchResult } from '@/types/fund'
 
 export const useFundStore = defineStore('fund', () => {
   // ── 状态 ──
@@ -11,15 +11,42 @@ export const useFundStore = defineStore('fund', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // ── 计算：合并为 FundDisplay 列表 ──
+  // ── 本地持久化：置顶 / 移除 ──
+  const pinnedCodes = ref<string[]>(loadPinnedCodes())
+  const removedCodes = ref<string[]>(loadRemovedCodes())
+
+  function loadPinnedCodes(): string[] {
+    try { return JSON.parse(localStorage.getItem('pinned_codes') || '[]') }
+    catch { return [] }
+  }
+  function savePinnedCodes() {
+    localStorage.setItem('pinned_codes', JSON.stringify(pinnedCodes.value))
+  }
+
+  function loadRemovedCodes(): string[] {
+    try { return JSON.parse(localStorage.getItem('removed_codes') || '[]') }
+    catch { return [] }
+  }
+  function saveRemovedCodes() {
+    localStorage.setItem('removed_codes', JSON.stringify(removedCodes.value))
+  }
+
+  // ── 计算：合并为 FundDisplay 列表（过滤已移除、置顶排序） ──
   const funds = computed<FundDisplay[]>(() => {
-    return fundInfos.value.map((info) => ({
-      info,
-      latestNav: latestNavs.value[info.fund_code] ?? null,
-    }))
+    return fundInfos.value
+      .filter(info => !removedCodes.value.includes(info.fund_code))
+      .map(info => ({
+        info,
+        latestNav: latestNavs.value[info.fund_code] ?? null,
+      }))
+      .sort((a, b) => {
+        const aPin = pinnedCodes.value.includes(a.info.fund_code) ? 1 : 0
+        const bPin = pinnedCodes.value.includes(b.info.fund_code) ? 1 : 0
+        return bPin - aPin
+      })
   })
 
-  // ── API 基础地址（通过环境变量配置，默认 fallback） ──
+  // ── API 基础地址 ──
   const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
   // ── 动作：加载行情列表 ──
@@ -28,7 +55,6 @@ export const useFundStore = defineStore('fund', () => {
     error.value = null
 
     try {
-      // 获取所有基金信息
       const infoRes = await fetch(`${API_BASE}/api/fund-info`)
       if (!infoRes.ok) throw new Error(`HTTP ${infoRes.status}`)
       const infoData = await infoRes.json()
@@ -44,7 +70,6 @@ export const useFundStore = defineStore('fund', () => {
             navMap[info.fund_code] = navData.data ?? null
           }
         } catch {
-          // 单只基金净值获取失败不影响其他基金
           navMap[info.fund_code] = null
         }
       }
@@ -60,9 +85,8 @@ export const useFundStore = defineStore('fund', () => {
   // ── 动作：加载某基金的全部历史净值（带缓存） ──
   async function loadNavHistory(fundCode: string) {
     if (navHistory.value[fundCode] && navHistory.value[fundCode].length > 0) {
-      return // 已缓存，不需要重复请求
+      return
     }
-
     loading.value = true
     try {
       const res = await fetch(`${API_BASE}/api/fund-nav/${fundCode}`)
@@ -80,9 +104,8 @@ export const useFundStore = defineStore('fund', () => {
   // ── 动作：加载某基金的日K行情数据（带缓存） ──
   async function loadMarketHistory(fundCode: string) {
     if (marketHistory.value[fundCode] && marketHistory.value[fundCode].length > 0) {
-      return // 已缓存
+      return
     }
-
     loading.value = true
     try {
       const res = await fetch(`${API_BASE}/api/fund-market/${fundCode}`)
@@ -97,5 +120,90 @@ export const useFundStore = defineStore('fund', () => {
     }
   }
 
-  return { funds, navHistory, marketHistory, loading, error, loadFunds, loadNavHistory, loadMarketHistory }
+  // ── 动作：搜索基金 ──
+  async function searchFunds(keyword: string): Promise<SearchResult[]> {
+    if (!keyword.trim()) return []
+    try {
+      const res = await fetch(`${API_BASE}/api/fund-info/search?keyword=${encodeURIComponent(keyword.trim())}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      return data.data as SearchResult[]
+    } catch (e) {
+      console.error('搜索基金失败:', e)
+      return []
+    }
+  }
+
+  // ── 动作：检查单只基金是否存在 ──
+  async function checkFundExists(fundCode: string): Promise<FundInfo | null> {
+    try {
+      const res = await fetch(`${API_BASE}/api/fund-info/${fundCode}`)
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.data as FundInfo
+    } catch {
+      return null
+    }
+  }
+
+  // ── 动作：获取单只基金最新净值 ──
+  async function getFundLatestNav(fundCode: string): Promise<FundNav | null> {
+    try {
+      const res = await fetch(`${API_BASE}/api/fund-nav/${fundCode}/latest`)
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.data as FundNav
+    } catch {
+      return null
+    }
+  }
+
+  // ── 动作：触发爬虫拉取 ──
+  async function fetchFundByCrawler(fundCode: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/api/fund-fetch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fund_code: fundCode }),
+      })
+      return res.ok
+    } catch (e) {
+      console.error('触发爬虫失败:', e)
+      return false
+    }
+  }
+
+  // ── 动作：置顶 / 取消置顶 ──
+  function togglePin(fundCode: string) {
+    const idx = pinnedCodes.value.indexOf(fundCode)
+    if (idx >= 0) {
+      pinnedCodes.value.splice(idx, 1)
+    } else {
+      pinnedCodes.value.push(fundCode)
+    }
+    savePinnedCodes()
+  }
+
+  function isPinned(fundCode: string): boolean {
+    return pinnedCodes.value.includes(fundCode)
+  }
+
+  // ── 动作：从自选列表移除 ──
+  function removeFund(fundCode: string) {
+    if (!removedCodes.value.includes(fundCode)) {
+      removedCodes.value.push(fundCode)
+      saveRemovedCodes()
+    }
+  }
+
+  function isRemoved(fundCode: string): boolean {
+    return removedCodes.value.includes(fundCode)
+  }
+
+  return {
+    funds, navHistory, marketHistory, loading, error,
+    loadFunds, loadNavHistory, loadMarketHistory,
+    searchFunds, checkFundExists, getFundLatestNav, fetchFundByCrawler,
+    togglePin, isPinned, removeFund, isRemoved,
+  }
 })

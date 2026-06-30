@@ -35,3 +35,17 @@ export interface FundDisplay {
   info: FundInfo
   latestNav: FundNav | null
 }
+
+/** 搜索结果单条（含最新净值） */
+export interface SearchResult {
+  info: FundInfo
+  latestNav: FundNav | null
+}
+
+/** 长按事件 payload */
+export interface LongPressPayload {
+  fundCode: string
+  fundName: string
+  x: number
+  y: number
+}

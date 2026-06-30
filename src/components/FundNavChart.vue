@@ -38,15 +38,15 @@ export interface ChartPoint {
 const props = defineProps<{
   data: ChartPoint[]
   loading?: boolean
-  /** 显示模式: absolute=净值绝对值, percentage=相对基准百分比 */
+  /** 显示模式：absolute=净值绝对值, percentage=相对基准百分比 */
   mode?: 'absolute' | 'percentage'
-  /** 图表类型: line=净值折线(默认), candle=K线行情(仅ETF/LOF) */
+  /** 图表类型：line=净值折线(默认), candle=K线行情(仅ETF/LOF) */
   chartType?: 'line' | 'candle'
   /** K线行情数据（chartType='candle' 时必传） */
   marketData?: FundMarket[]
 }>()
 
-// ── K线选中状态（移动端友好：点击蜡烛固定显示，再点空白取消） ──
+//K线选中状态
 const selectedCandleIndex = ref<number | null>(null)
 const currentCandle = computed<FundMarket | null>(() => {
   const arr = sortedMarket.value
@@ -54,18 +54,18 @@ const currentCandle = computed<FundMarket | null>(() => {
   if (selectedCandleIndex.value !== null) {
     return arr[selectedCandleIndex.value] ?? null
   }
-  // 未选中时显示最后一根
+  //未选中时显示最后一根
   return arr[arr.length - 1] ?? null
 })
 
-// ── 排序：确保数据从左到右从早到晚（后端可能返回 DESC） ──
+//排序确保数据从左到右从早到晚
 const sortedData = computed<ChartPoint[]>(() => {
   return [...props.data].sort(
     (a, b) => a.nav_date.localeCompare(b.nav_date)
   )
 })
 
-// ── K线数据排序 ──
+//K线数据排序
 const sortedMarket = computed<FundMarket[]>(() => {
   if (!props.marketData) return []
   return [...props.marketData].sort(
@@ -73,7 +73,7 @@ const sortedMarket = computed<FundMarket[]>(() => {
   )
 })
 
-// ── 百分比模式下：以 sortedData[0].unit_nav 为 0% 基准 ──
+//以 sortedData[0].unit_nav为0%基准
 const pctData = computed<number[]>(() => {
   if (sortedData.value.length === 0) return []
   const base = sortedData.value[0].unit_nav
@@ -81,16 +81,16 @@ const pctData = computed<number[]>(() => {
   return sortedData.value.map((p) => ((p.unit_nav - base) / base) * 100)
 })
 
-// ── Y 轴数据值（根据 mode 选择） ──
+//Y轴数据值
 const yData = computed<number[]>(() => {
   if (props.mode === 'percentage') return pctData.value
   return sortedData.value.map((p) => p.unit_nav)
 })
 
-// ── 图表标签 ──
+//图表标签
 const chartLabel = computed(() => props.mode === 'percentage' ? '累计收益率' : '单位净值')
 
-// ── Y 轴格式化 ──
+//Y轴格式化
 const yTickFormat = computed(() => {
   if (props.mode === 'percentage') {
     return (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
@@ -98,7 +98,7 @@ const yTickFormat = computed(() => {
   return (value: number) => value.toFixed(4)
 })
 
-// ── Tooltip 格式化 ──
+//Tooltip格式化
 const tooltipLabel = computed(() => {
   if (props.mode === 'percentage') {
     return (item: any) => `${item.dataset.label}: ${item.raw >= 0 ? '+' : ''}${Number(item.raw).toFixed(2)}%`
@@ -106,7 +106,7 @@ const tooltipLabel = computed(() => {
   return (item: any) => `${item.dataset.label}: ${Number(item.raw).toFixed(4)}`
 })
 
-// ── 图表数据 ──
+//图表数据
 const chartData = computed<any>(() => {
   if (props.chartType === 'candle') {
     return buildCandleData()
@@ -206,7 +206,7 @@ function buildCandleData() {
   }
 }
 
-// ── 图表配置 ──
+//图表配置
 const chartOptions = computed<any>(() => {
   if (props.chartType === 'candle') {
     return buildCandleOptions()
@@ -292,22 +292,22 @@ function buildCandleOptions(): any {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    // 点击事件委托给 chart 实例处理
+    //点击事件委托给chart实例处理
     onClick: (_event: any, elements: any[]) => {
       if (elements.length > 0) {
         const el = elements[0]
-        // elements[0].index 是 dataset index，elements[0].datasetIndex 是 dataset 编号
-        // candlestick 是第一层 dataset（K线）
+        //elements[0].index是dataset index，elements[0].datasetIndex是dataset编号
+        //candlestick是第一层dataset（K线）
         const firstCandleDataset = 0
         if (el.datasetIndex === firstCandleDataset) {
           if (selectedCandleIndex.value === el.index) {
-            selectedCandleIndex.value = null // 再次点击取消
+            selectedCandleIndex.value = null //再次点击取消
           } else {
             selectedCandleIndex.value = el.index
           }
         }
       } else {
-        // 点击空白取消选中
+        //点击空白取消选中
         selectedCandleIndex.value = null
       }
     },
@@ -326,7 +326,7 @@ function buildCandleOptions(): any {
           color: '#666',
         },
       },
-      // K线模式下禁用浮动 tooltip，使用下方固定信息条
+      //K线模式下禁用浮动 tooltip，使用下方固定信息条
       tooltip: {
         enabled: false,
       },
@@ -372,13 +372,13 @@ function buildCandleOptions(): any {
   }
 }
 
-// ── 格式化日期 ──
+//格式化日期
 function formatDate(dateStr: string): string {
   const d = dateStr.split('-')
   return `${d[1]}/${d[2]}`
 }
 
-// ── 响应式 ──
+//响应式
 const chartRef = ref<InstanceType<typeof Line> | null>(null)
 const chartHeight = ref(220)
 
@@ -412,7 +412,6 @@ onUnmounted(() => {
       <Line ref="chartRef" :data="chartData" :options="chartOptions" />
     </div>
 
-    <!-- ── K线信息条（移动端友好，固定在图表下方） ── -->
     <Transition name="candle-info">
       <div v-if="chartType === 'candle' && currentCandle" class="candle-info-bar" :key="currentCandle.trade_date">
         <!-- 日期 -->
@@ -425,25 +424,25 @@ onUnmounted(() => {
         <div class="candle-info-item">
           <span class="candle-info-label">开</span>
           <span class="candle-info-value" :class="currentCandle.close >= currentCandle.open ? 'up' : 'down'">
-            {{ currentCandle.open.toFixed(4) }}
+            {{ currentCandle.open.toFixed(3) }}
           </span>
         </div>
         <div class="candle-info-item">
           <span class="candle-info-label">高</span>
-          <span class="candle-info-value">{{ currentCandle.high.toFixed(4) }}</span>
+          <span class="candle-info-value">{{ currentCandle.high.toFixed(3) }}</span>
         </div>
         <div class="candle-info-item">
           <span class="candle-info-label">低</span>
-          <span class="candle-info-value">{{ currentCandle.low.toFixed(4) }}</span>
+          <span class="candle-info-value">{{ currentCandle.low.toFixed(3) }}</span>
         </div>
         <div class="candle-info-item">
           <span class="candle-info-label">收</span>
           <span class="candle-info-value" :class="currentCandle.close >= currentCandle.open ? 'up' : 'down'">
-            {{ currentCandle.close.toFixed(4) }}
+            {{ currentCandle.close.toFixed(3) }}
           </span>
         </div>
         <div class="candle-info-divider"></div>
-        <!-- 成交额 -->
+
         <div class="candle-info-item">
           <span class="candle-info-label">成交</span>
           <span class="candle-info-value">
@@ -463,7 +462,7 @@ onUnmounted(() => {
   width: 100%;
   transition: height 0.3s ease;
 }
-/* ── 骨架屏 / 空态 ── */
+
 .chart-placeholder {
   width: 100%;
   height: 220px;
@@ -495,16 +494,15 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-/* ── K线信息条（图表下方固定显示） ── */
 .candle-info-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #f9fafb;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: clamp(4px, 1vw, 8px) clamp(6px, 1.5vw, 12px);
   margin-top: 8px;
-  gap: 4px;
+  gap: clamp(2px, 0.8vw, 6px);
 }
 .candle-info-item {
   display: flex;
@@ -513,21 +511,25 @@ onUnmounted(() => {
   gap: 1px;
   min-width: 0;
   flex-shrink: 1;
+  flex: 1;
 }
 .candle-info-item.date-item {
-  min-width: 56px;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 .candle-info-label {
-  font-size: 9px;
+  font-size: clamp(7px, 1.2vw, 9px);
   color: #999;
   line-height: 1.2;
+  white-space: nowrap;
 }
 .candle-info-value {
-  font-size: 12px;
+  font-size: clamp(10px, 1.8vw, 12px);
   font-weight: 600;
   color: #1a1a1a;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
+  white-space: nowrap;
 }
 .candle-info-value.up {
   color: #e74c3c;
@@ -537,12 +539,55 @@ onUnmounted(() => {
 }
 .candle-info-divider {
   width: 1px;
-  height: 28px;
+  height: clamp(20px, 4vw, 28px);
   background: #e8e8e8;
   flex-shrink: 0;
 }
 
-/* ── K线信息条入场/切换过渡 ── */
+/* 窄屏两行布局 */
+@media (max-width: 420px) {
+  .candle-info-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 6px 8px;
+    gap: 4px 6px;
+  }
+  /* 第一行：日期和成交均匀分布 */
+  .candle-info-item.date-item {
+    order: 1;
+    flex: 1;
+  }
+  /* 第一行：成交 */
+  .candle-info-item:nth-child(8) {
+    order: 2;
+    flex: 1;
+  }
+  /* 伪元素：100%宽度作为换行分隔，让第二行另起一行 */
+  .candle-info-bar::after {
+    content: '';
+    order: 3;
+    width: 100%;
+    height: 0;
+  }
+  /* 第二行：开高低收平均分布 */
+  .candle-info-item:nth-child(3),
+  .candle-info-item:nth-child(4),
+  .candle-info-item:nth-child(5),
+  .candle-info-item:nth-child(6) {
+    order: 4;
+    flex: 1 1 20%;
+    min-width: 0;
+  }
+  .candle-info-divider {
+    display: none;
+  }
+  .candle-info-item {
+    flex: none;
+  }
+}
+
+
 .candle-info-enter-active {
   animation: candleInfoIn var(--duration-normal, 0.2s) var(--ease-out, ease);
 }
@@ -572,7 +617,6 @@ onUnmounted(() => {
   }
 }
 
-/* ── 图表容器入场动画 ── */
 .chart-container {
   animation: fadeIn var(--duration-slow, 0.3s) var(--ease-out, ease) both;
 }

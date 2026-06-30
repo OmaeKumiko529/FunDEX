@@ -15,4 +15,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    watch: {
+      // 忽略Tauri的Rust编译输出目录
+      ignored: ['**/src-tauri/target/**'],
+    }
+  }
 })

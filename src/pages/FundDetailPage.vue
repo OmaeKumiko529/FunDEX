@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFundStore } from '@/stores/fundStore'
+import type { FundInfo, FundNav } from '@/types/fund'
 import FundCard from '@/components/FundCard.vue'
 import FundNavChart from '@/components/FundNavChart.vue'
 import type { ChartPoint } from '@/components/FundNavChart.vue'
@@ -15,14 +16,19 @@ const fundStore = useFundStore()
 // ── 当前基金代码（从路由获取） ──
 const fundCode = computed(() => route.params.fundCode as string)
 
+// ── 独立 fallback 数据（当 fundStore.funds 中找不到时） ──
+const fallbackInfo = ref<FundInfo | null>(null)
+const fallbackNav = ref<FundNav | null>(null)
+
 // ── 当前基金数据 ──
 const currentFund = computed(() => {
-  return fundStore.funds.find((f) => f.info.fund_code === fundCode.value) ?? null
+  const fromStore = fundStore.funds.find((f) => f.info.fund_code === fundCode.value)
+  if (fromStore) return fromStore
+  if (!fallbackInfo.value) return null
+  return { info: fallbackInfo.value, latestNav: fallbackNav.value }
 })
 
 // ── 是否为 ETF/LOF 场内品种 ──
-// 优先从 fundStore 的 fundInfos（loadFunds 后）获取 is_traded，
-// 如果 fundInfos 尚未加载则 fallback 到后台获取
 const isTraded = ref(false)
 
 // ── 时间范围 ──
@@ -106,9 +112,35 @@ function goBack() {
   router.back()
 }
 
+// ── 获取 fallback 数据（store 中没有时使用） ──
+async function loadFallbackData(code: string) {
+  try {
+    const infoRes = await fetch(`${API_BASE}/api/fund-info/${code}`)
+    if (!infoRes.ok) return
+    const infoData = await infoRes.json()
+    if (!infoData.data) return
+    fallbackInfo.value = infoData.data
+
+    const navRes = await fetch(`${API_BASE}/api/fund-nav/${code}/latest`)
+    if (navRes.ok) {
+      const navData = await navRes.json()
+      fallbackNav.value = navData.data ?? null
+    }
+  } catch {
+    // fallback 失败不阻塞页面
+  }
+}
+
 // ── 加载数据 ──
 onMounted(() => {
   if (!fundCode.value) return
+
+  // 检查 store 中是否有该基金数据
+  const inStore = fundStore.funds.find((f) => f.info.fund_code === fundCode.value)
+  if (!inStore) {
+    // fallback：独立请求基金信息和最新净值
+    loadFallbackData(fundCode.value)
+  }
 
   // 1) 优先从 fundStore 缓存拿 is_traded
   const cached = fundStore.funds.find((f) => f.info.fund_code === fundCode.value)
