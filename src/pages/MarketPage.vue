@@ -9,6 +9,9 @@ import type { LongPressPayload } from '@/types/fund'
 const router = useRouter()
 const fundStore = useFundStore()
 
+// ── 刷新 key（用于 TransitionGroup 重播入场动画） ──
+const refreshKey = ref(0)
+
 // ── 下拉刷新 ──
 const refreshing = ref(false)
 const pullDistance = ref(0)
@@ -35,15 +38,36 @@ function onTouchMove(e: TouchEvent) {
   }
 }
 
+function smoothReset() {
+  const start = performance.now()
+  const initial = pullDistance.value
+  const duration = 150 // ms
+
+  if (initial === 0) return
+
+  function step(now: number) {
+    const elapsed = now - start
+    const progress = Math.min(elapsed / duration, 1)
+    // ease-out quadratic
+    const eased = 1 - Math.pow(1 - progress, 2)
+    pullDistance.value = initial * (1 - eased)
+    if (progress < 1) {
+      requestAnimationFrame(step)
+    }
+  }
+  requestAnimationFrame(step)
+}
+
 function onTouchEnd() {
   if (pullDistance.value >= THRESHOLD) {
     refreshing.value = true
     fundStore.loadFunds().finally(() => {
       refreshing.value = false
       pullDistance.value = 0
+      refreshKey.value++
     })
-  } else {
-    pullDistance.value = 0
+  } else if (pullDistance.value > 0) {
+    smoothReset()
   }
   isPulling.value = false
 }
@@ -75,14 +99,18 @@ function closeTipTool() {
 
 function onTogglePin(fundCode: string) {
   fundStore.togglePin(fundCode)
+  refreshKey.value++
 }
 
 function onRemove(fundCode: string) {
   fundStore.removeFund(fundCode)
+  refreshKey.value++
 }
 
 onMounted(() => {
-  fundStore.loadFunds()
+  fundStore.loadFunds().then(() => {
+    refreshKey.value++
+  })
 })
 </script>
 
@@ -105,31 +133,35 @@ onMounted(() => {
       </span>
     </div>
 
-    <!-- 页面头部 -->
-    <header class="page-header">
-      <h1 class="page-title">行情</h1>
-      <button class="add-btn" title="添加基金" @click="goSearch">＋</button>
-    </header>
+    <!-- 页面头部（固定，Teleport 到 body 避免受 Transition transform 影响） -->
+    <Teleport to="body">
+      <header class="page-header">
+        <h1 class="page-title">行情</h1>
+        <button class="add-btn" title="添加基金" @click="goSearch">＋</button>
+      </header>
+    </Teleport>
 
     <!-- 加载中（首次） -->
-    <div v-if="fundStore.loading && fundStore.funds.length === 0" class="loading-state">
-      <div class="spinner"></div>
-      <span>加载中...</span>
-    </div>
+    <Transition name="fade">
+      <div v-if="fundStore.loading && fundStore.funds.length === 0" class="loading-state">
+        <div class="spinner"></div>
+        <span>加载中...</span>
+      </div>
+    </Transition>
 
     <!-- 错误提示 -->
-    <div v-else-if="fundStore.error && fundStore.funds.length === 0" class="error-state">
+    <div v-if="fundStore.error && fundStore.funds.length === 0" class="error-state">
       {{ fundStore.error }}
       <button class="retry-btn" @click="fundStore.loadFunds()">重试</button>
     </div>
 
-    <!-- 基金列表 -->
-    <div v-else class="fund-list">
+    <!-- 基金列表（TransitionGroup 支持入场/离场/排序动画） -->
+    <TransitionGroup v-if="!fundStore.loading && !fundStore.error && fundStore.funds.length > 0" name="list" tag="div" class="fund-list" :key="refreshKey">
       <div
         v-for="(item, index) in fundStore.funds"
         :key="item.info.fund_code"
         class="fund-card-wrapper"
-        :style="{ animationDelay: `${index * 0.05}s` }"
+        :style="{ '--index': index }"
       >
         <FundCard
           :fund-code="item.info.fund_code"
@@ -142,7 +174,7 @@ onMounted(() => {
           @longpress="onLongPress"
         />
       </div>
-    </div>
+    </TransitionGroup>
 
     <!-- TipTool 长按弹出菜单 -->
     <TipTool
@@ -161,6 +193,7 @@ onMounted(() => {
 <style scoped>
 .market-page {
   padding: var(--spacing-xl, 20px) var(--spacing-lg, 16px);
+  padding-top: calc(var(--safe-area-top, 0px) + 76px);
   padding-bottom: calc(var(--nav-height, 10vh) + var(--spacing-xl, 20px));
   min-height: 100vh;
   min-height: calc(var(--vh, 1vh) * 100);
@@ -175,7 +208,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: height var(--duration-normal, 0.2s) var(--ease-out, ease);
+  transition: height 0.15s var(--ease-out, ease);
   color: var(--color-text-tertiary, #999);
   font-size: var(--font-sm, 12px);
 }
@@ -198,12 +231,22 @@ onMounted(() => {
   animation: spin 0.8s linear infinite;
 }
 
-/* ── 头部 ── */
+/* ── 头部（固定） ── */
 .page-header {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-xl, 20px);
+  padding: var(--spacing-xl, 20px) var(--spacing-lg, 16px);
+  padding-top: calc(var(--safe-area-top, 0px) + var(--spacing-xl, 20px));
+  background: var(--color-bg, #f5f5f5);
+  z-index: 50;
+  box-sizing: border-box;
 }
 
 .page-title {
@@ -283,14 +326,54 @@ onMounted(() => {
   background: rgba(255, 77, 79, 0.05);
 }
 
-/* ── 基金列表 ── */
+/* ── 基金列表（TransitionGroup） ── */
 .fund-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: relative;
 }
 
+/* 入场动画：交错 fadeInUp */
 .fund-card-wrapper {
   animation: fadeInUp var(--duration-slow, 0.3s) var(--ease-out, ease) both;
+  animation-delay: calc(var(--index, 0) * 0.05s);
+}
+
+/* TransitionGroup 过渡 */
+.list-enter-active {
+  transition: all var(--duration-slow, 0.3s) var(--ease-out, ease);
+}
+
+.list-leave-active {
+  transition: all var(--duration-normal, 0.2s) var(--ease-out, ease);
+  position: absolute;
+  width: 100%;
+  left: 0;
+}
+
+.list-move {
+  transition: transform var(--duration-slow, 0.3s) var(--ease-out, ease);
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* ── VNode 淡入淡出过渡（用于 loading spinner） ── */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--duration-normal, 0.2s) var(--ease-out, ease);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

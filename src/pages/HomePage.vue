@@ -43,7 +43,8 @@ watch(
 
 .content-area {
   flex: 1;
-  padding-bottom: calc(var(--nav-height, 10vh) + var(--safe-area-bottom, 0px));
+  padding-top: var(--safe-area-top, 0px);
+  padding-bottom: calc(max(var(--nav-height, 10vh), var(--nav-min-height, 56px)) + var(--safe-area-bottom, 0px));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

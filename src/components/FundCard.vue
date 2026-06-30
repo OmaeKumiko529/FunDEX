@@ -27,9 +27,11 @@ let isLongPress = false
 let pressStartX = 0
 let pressStartY = 0
 const pressed = ref(false)
+const hasMoved = ref(false)
 
 function onTouchStart(e: TouchEvent) {
   isLongPress = false
+  hasMoved.value = false
   const touch = e.touches?.[0]
   if (!touch) return
   pressStartX = touch.clientX
@@ -55,6 +57,7 @@ function onTouchMove(e: TouchEvent) {
   const dx = Math.abs(touch.clientX - pressStartX)
   const dy = Math.abs(touch.clientY - pressStartY)
   if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+    hasMoved.value = true
     clearTimeout(pressTimer)
     pressTimer = null
   }
@@ -62,6 +65,11 @@ function onTouchMove(e: TouchEvent) {
 
 function onTouchEnd() {
   pressed.value = false
+  // 如果发生了滑动，阻止 click 事件
+  if (hasMoved.value) {
+    hasMoved.value = false
+    return
+  }
   if (pressTimer) {
     clearTimeout(pressTimer)
     pressTimer = null
@@ -274,8 +282,4 @@ const navFormatted = computed(() => formatNav(props.unitNav))
   padding-top: 10px;
 }
 
-/* ── 入场动画 ── */
-.fund-card {
-  animation: fadeInUp var(--duration-slow, 0.3s) var(--ease-out, ease) both;
-}
 </style>

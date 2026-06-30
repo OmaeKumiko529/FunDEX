@@ -14,7 +14,7 @@ import fundFetchRouter from './routes/fundFetch.js';
 initDatabase();
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
+const PORT = Number(process.env.PORT ?? 3000);
 
 // 中间件
 app.use(cors());
@@ -32,8 +32,9 @@ app.get('/api/health', (_req, res) => {
 });
 
 // 启动
-app.listen(PORT, () => {
-  console.log(`[server] FundEx 服务已启动 → http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[server] FundEx 服务已启动 → http://0.0.0.0:${PORT}`);
+  console.log(`[server] 局域网访问 → http://192.168.31.250:${PORT}`);
   console.log(`[server] API 端点:`);
   console.log(`  GET  /api/fund-info`);
   console.log(`  GET  /api/fund-info/:code`);
