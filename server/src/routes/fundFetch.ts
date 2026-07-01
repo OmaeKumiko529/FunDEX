@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { findPython } from '../python.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,12 +24,18 @@ router.post('/', (req: Request, res: Response) => {
     return;
   }
 
+  const py = findPython();
+  if (!py) {
+    res.status(500).json({ error: '未检测到 Python 环境' });
+    return;
+  }
+
   const serverDir = path.resolve(__dirname, '../..');
   const pythonScript = path.resolve(serverDir, 'fetch_fund_data.py');
 
   console.log(`[fund-fetch] 开始获取基金 ${fund_code} 的数据...`);
 
-  const pythonProcess = spawn('python', [pythonScript, fund_code], {
+  const pythonProcess = spawn(py.cmd, [...py.args, pythonScript, fund_code], {
     cwd: serverDir,
     env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
     stdio: ['ignore', 'pipe', 'pipe'],

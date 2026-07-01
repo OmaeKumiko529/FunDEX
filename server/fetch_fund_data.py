@@ -34,16 +34,28 @@ DB_PATH = os.path.join(SCRIPT_DIR, "data", "fundex.db")
 FUND_LIST_PATH = os.path.join(SCRIPT_DIR, "fund_list.txt")
 
 # ─── ETF/LOF 判定关键字 ──────────────────────
-ETF_KEYWORDS = ["ETF", "LOF", "指数型-股票", "指数型-海外"]
+ETF_KEYWORDS = ["LOF", "指数型-股票", "指数型-海外"]
+# ETF 关键字单独处理（排除 "联接" 基金，它们是场外品种）
+ETF_KEYWORD = "ETF"
 
 
 def is_etf_lof(fund_type: str | None) -> bool:
-    """判断是否为场内可交易品种（ETF/LOF）"""
+    """判断是否为场内可交易品种（ETF/LOF）
+    
+    规则：
+    - 基金类型含 "LOF" → 场内 ✅
+    - 基金类型含 "ETF" 且不含 "联接" → 场内 ✅
+    - 基金类型含 "指数型-股票" / "指数型-海外" → 场内 ✅（指数LOF）
+    - 其他 → 场外 ❌
+    """
     if not fund_type:
         return False
     for kw in ETF_KEYWORDS:
         if kw in fund_type:
             return True
+    # ETF 需要排除 "联接" 基金（场外品种）
+    if ETF_KEYWORD in fund_type and "联接" not in fund_type:
+        return True
     return False
 
 

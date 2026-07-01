@@ -11,19 +11,9 @@ router.get('/', (_req: Request, res: Response) => {
   res.json({ data: rows });
 });
 
-// GET /api/fund-info/:code — 获取单只基金信息
-router.get('/:code', (req: Request, res: Response) => {
-  const db = getDB();
-  const row = db.get<FundInfo>('SELECT * FROM fund_info WHERE fund_code = ?', req.params.code);
-  if (!row) {
-    res.status(404).json({ error: '基金不存在' });
-    return;
-  }
-  res.json({ data: row });
-});
-
 // GET /api/fund-info/search — 按代码或名称搜索基金（模糊匹配）
 // 返回基金基本信息 + 最新净值
+// 注意：必须在 /:code 之前注册，否则会被 /:code 捕获
 router.get('/search', (req: Request, res: Response) => {
   const { keyword } = req.query as Record<string, string | undefined>;
   if (!keyword || keyword.trim().length === 0) {
@@ -69,6 +59,17 @@ router.get('/search', (req: Request, res: Response) => {
   }));
 
   res.json({ data });
+});
+
+// GET /api/fund-info/:code — 获取单只基金信息
+router.get('/:code', (req: Request, res: Response) => {
+  const db = getDB();
+  const row = db.get<FundInfo>('SELECT * FROM fund_info WHERE fund_code = ?', req.params.code);
+  if (!row) {
+    res.status(404).json({ error: '基金不存在' });
+    return;
+  }
+  res.json({ data: row });
 });
 
 // POST /api/fund-info — 批量写入基金信息（幂等：INSERT OR REPLACE）

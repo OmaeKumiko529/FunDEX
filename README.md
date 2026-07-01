@@ -80,16 +80,44 @@ npm run seed
 到此处，所有准备工作已经完备。启动服务的方法如下：
 
 ```Bash
-cd FunDEX
-npm run dev #启动前端服务
-npm run tauri:dev #启动tauri桌面服务
+# 启动前端（Vite Dev Server，端口5173）
+npm run dev
 
-cd server
-npm run dev #启动后端服务
+# 或启动 Tauri 桌面端（自动启动前端）
+npm run tauri:dev
 ```
 
-如果有需求，可以使用ADB功能在模拟器或真机上测试。
+**注意：必须先启动后端服务，所有API才能正常响应。**
 
-请先在`.env`中修改`VITE_API_BASE`以明确测试范围。
+后端启动方式（在 `server` 目录下）：
+```Bash
+cd server
 
-若您使用Android Studio提供的虚拟机，请写 http://10.0.2.2:3000 ；若您使用无线调试连接真机，请使用 计算机局域网IP+3000端口。
+# 启动后端（开发模式，自动监听文件变更）
+npm run dev
+# 或 npx tsx watch src/index.ts
+
+# 启动后端（生产模式）
+npm start
+# 或 npx tsx src/index.ts
+```
+
+> ⚠️ 根目录的 `npm run start` 运行的是交互式启动菜单（`scripts/dev.js`），需要手动选择测试模式。它也会自动启动后端，但主要用途是配合 Tauri/ADB 测试。
+
+### 后端已就绪的验证
+
+后端启动后，访问 http://localhost:3000/api/health ，预期返回：
+```json
+{ "status": "ok", "timestamp": "..." }
+```
+
+### WiFi ADB 真机测试
+
+本项目使用 **Vite Proxy** 统一转发 `/api` 请求到后端，保证本机浏览器 / ADB 手机 / 虚拟机三种场景都不需要手动配置 IP。
+
+- Tauri WiFi ADB 模式：自动设置 `TAURI_DEV_HOST` 为 PC 局域网 IP
+- 虚拟机：Vite 绑定 `0.0.0.0:5173`，手机通过 `http://<PC局域网IP>:5173` 访问
+- Vite proxy 自动将 `/api/*` 请求转发到 `localhost:3000`
+
+> ❌ `.env` 中 `VITE_API_BASE` 已弃用，无需修改。
+> ✅ 前端代码统一使用相对路径 `fetch('/api/...')`，适配所有场景。

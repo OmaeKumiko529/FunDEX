@@ -47,7 +47,9 @@ export const useFundStore = defineStore('fund', () => {
   })
 
   // ── API 基础地址 ──
-  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+  // 使用相对路径，由 Vite Dev Server 的 proxy 转发到后端
+  // 本机、WiFi ADB、虚拟机三种场景都可用，无需修改配置
+  const API_BASE = ''
 
   // ── 动作：加载行情列表 ──
   async function loadFunds() {

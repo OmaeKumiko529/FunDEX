@@ -7,7 +7,9 @@ import FundCard from '@/components/FundCard.vue'
 import FundNavChart from '@/components/FundNavChart.vue'
 import type { ChartPoint } from '@/components/FundNavChart.vue'
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+// 使用相对路径，由 Vite Dev Server 的 proxy 转发到后端
+// 本机、WiFi ADB、虚拟机三种场景都可用，无需修改配置
+const API_BASE = ''
 
 const route = useRoute()
 const router = useRouter()

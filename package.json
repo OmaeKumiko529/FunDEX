@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-
-    "tauri": "tauri", 
-    "tauri:dev": "tauri dev", 
-
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "start": "node scripts/dev.js",
+    "launcher": "node scripts/dev.js",
+    "pull": "node scripts/pull.js",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",

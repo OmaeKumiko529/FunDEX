@@ -37,3 +37,10 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Database & runtime data
+server/data/
+server/data/avatars/
+server/data/fundex.db
+server/data/fundex.db-wal
+server/data/fundex.db-shm

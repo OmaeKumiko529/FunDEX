@@ -76,7 +76,9 @@ const sortedMarket = computed<FundMarket[]>(() => {
 //以 sortedData[0].unit_nav为0%基准
 const pctData = computed<number[]>(() => {
   if (sortedData.value.length === 0) return []
-  const base = sortedData.value[0].unit_nav
+  const first = sortedData.value[0]
+  if (!first) return []
+  const base = first.unit_nav
   if (base === 0) return sortedData.value.map(() => 0)
   return sortedData.value.map((p) => ((p.unit_nav - base) / base) * 100)
 })
@@ -190,7 +192,7 @@ function buildCandleData() {
         yAxisID: 'y1',
         backgroundColor: volumeData.map((_, idx) => {
           const prev = idx > 0 ? sortedMarket.value[idx - 1] : null
-          const curr = sortedMarket.value[idx]
+          const curr = sortedMarket.value[idx]!
           if (prev && curr.close >= prev.close) {
             return 'rgba(231, 76, 60, 0.3)'
           }
